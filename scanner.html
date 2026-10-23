@@ -10,9 +10,11 @@ function codeOf(t){var m=String(t).match(/[?&](?:wo|id|code|workorder)=([^&#\s]*
 function found(t){if(done)return;if(!isOurs(t)){if(Date.now()-badAt>2500){badAt=Date.now();msg("That QR code isn\u2019t a job code. Try the tag on the job.",true)}return}
  done=true;stop();try{navigator.vibrate&&navigator.vibrate(40)}catch(e){}
  document.body.classList.add("done");$("okt").textContent=codeOf(t);
+ var back=APP?APP+(APP.indexOf("?")<0?"?":"&")+"wo="+encodeURIComponent(codeOf(t)):"";
  var sent=false;try{if(window.opener&&!window.opener.closed){window.opener.postMessage({etempo:"scan",text:String(t)},"*");sent=true}}catch(e){}
- if(sent){setTimeout(function(){window.close()},350);setTimeout(function(){$("oks").textContent="Go back to eTempo \u2014 the job is open there.";},1200)}
- else if(APP){location.href=APP+(APP.indexOf("?")<0?"?":"&")+"wo="+encodeURIComponent(codeOf(t))}}
+ if(sent){setTimeout(function(){window.close()},300);setTimeout(function(){if(back)location.replace(back);else $("oks").textContent="Go back to eTempo \u2014 the job is open there."},900)}
+ else if(back){$("oks").textContent="Opening eTempo\u2026";location.replace(back)}
+ else{$("oks").textContent="Go back to eTempo and scan again."}}
 function decode(src,w,h,max,thorough,cb){if(!w||!h)return cb("");
  if(det){det.detect(src).then(function(c){if(c&&c[0]&&c[0].rawValue)return cb(c[0].rawValue);if(thorough)jq(src,w,h,max,true,cb);else cb("")}).catch(function(){det=null;jq(src,w,h,max,thorough,cb)});return}
  jq(src,w,h,max,thorough,cb)}
@@ -24,7 +26,7 @@ function start(){msg("Starting the camera\u2026");
  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){msg("This browser can\u2019t open the camera here. Use the photo option instead.",true);return}
  navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:"environment"},width:{ideal:1280},height:{ideal:720}}}).then(function(s){stream=s;var v=$("v");v.srcObject=s;var p=v.play();if(p&&p.catch)p.catch(function(){});document.body.classList.add("live");msg("Point the camera at the QR code");loop()})
  .catch(function(e){var n=(e&&e.name)||"Error";msg(n==="NotAllowedError"?"Camera access was refused. Allow the camera for this page and tap Try again.":"The camera couldn\u2019t start ("+n+(e&&e.message?": "+e.message:"")+"). Tap Try again.",true);$("again").style.display=""})}
-$("x").onclick=function(){stop();window.close();if(APP)setTimeout(function(){location.href=APP},200)};
+$("x").onclick=function(){stop();if(window.opener){window.close()}if(APP)setTimeout(function(){location.replace(APP)},150)};
 $("again").onclick=function(){this.style.display="none";start()};
 $("f").onchange=function(){var f=this.files&&this.files[0];this.value="";if(!f)return;msg("Reading the photo\u2026");var u=URL.createObjectURL(f),i=new Image();i.onload=function(){load(function(){decode(i,i.naturalWidth,i.naturalHeight,1600,true,function(t){URL.revokeObjectURL(u);if(t)found(t);else msg("No QR code found in that photo. Try again.",true)})})};i.src=u};
 document.addEventListener("visibilitychange",function(){if(document.hidden)stop();else if(!done&&!stream)start()});
